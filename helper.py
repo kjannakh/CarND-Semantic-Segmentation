@@ -10,7 +10,6 @@ import re
 import random
 import numpy as np
 import os.path
-import scipy.misc
 import shutil
 import zipfile
 import time
@@ -18,6 +17,7 @@ import tensorflow as tf
 from glob import glob
 from urllib.request import urlretrieve
 from tqdm import tqdm
+from PIL import Image
 
 
 class DLProgress(tqdm):
@@ -90,7 +90,7 @@ def gen_batch_function(data_folder, image_shape):
 		:return: Batches of training data
 		"""
 		# Grab image and label paths
-		image_paths = glob(os.path.join(data_folder, 'image_2', '*.png'))
+		image_paths = glob(os.path.join(data_folder, 'driver*/*/*.jpg'))
 		label_paths = {
 			re.sub(r'_(lane|road)_', '_', os.path.basename(path)): path
 			for path in glob(os.path.join(data_folder, 'gt_image_2', '*_road_*.png'))}
@@ -105,8 +105,8 @@ def gen_batch_function(data_folder, image_shape):
 			for image_file in image_paths[batch_i:batch_i+batch_size]:
 				gt_image_file = label_paths[os.path.basename(image_file)]
 				# Re-size to image_shape
-				image = scipy.misc.imresize(scipy.misc.imread(image_file), image_shape)
-				gt_image = scipy.misc.imresize(scipy.misc.imread(gt_image_file), image_shape)
+				image = Image.resize(Image.read(image_file), image_shape)
+				gt_image = Image.resize(Image.read(gt_image_file), image_shape)
 
 				# Create "one-hot-like" labels by class
 				gt_bg = np.all(gt_image == background_color, axis=2)
@@ -132,7 +132,7 @@ def gen_test_output(sess, logits, keep_prob, image_pl, data_folder, image_shape)
 	:return: Output for for each test image
 	"""
 	for image_file in glob(os.path.join(data_folder, 'image_2', '*.png')):
-		image = scipy.misc.imresize(scipy.misc.imread(image_file), image_shape)
+		image = Image.resize(Image.read(image_file), image_shape)
 
 		# Run inference
 		im_softmax = sess.run(
@@ -144,8 +144,8 @@ def gen_test_output(sess, logits, keep_prob, image_pl, data_folder, image_shape)
 		segmentation = (im_softmax > 0.5).reshape(image_shape[0], image_shape[1], 1)
 		# Create mask based on segmentation to apply to original image
 		mask = np.dot(segmentation, np.array([[0, 255, 0, 127]]))
-		mask = scipy.misc.toimage(mask, mode="RGBA")
-		street_im = scipy.misc.toimage(image)
+		mask = Image.fromarray(mask, mode="RGBA")
+		street_im = Image.fromarray(image)
 		street_im.paste(mask, box=None, mask=mask)
 
 		yield os.path.basename(image_file), np.array(street_im)
@@ -173,4 +173,4 @@ def save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_p
 	image_outputs = gen_test_output(
 		sess, logits, keep_prob, input_image, os.path.join(data_dir, 'data_road/testing'), image_shape)
 	for name, image in image_outputs:
-		scipy.misc.imsave(os.path.join(output_dir, name), image)
+		Image.save(os.path.join(output_dir, name), image)
