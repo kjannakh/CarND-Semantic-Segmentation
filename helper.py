@@ -18,6 +18,8 @@ from glob import glob
 from urllib.request import urlretrieve
 from tqdm import tqdm
 from PIL import Image
+from skimage import transform
+from skimage import io
 
 
 class DLProgress(tqdm):
@@ -90,23 +92,37 @@ def gen_batch_function(data_folder, image_shape):
 		:return: Batches of training data
 		"""
 		# Grab image and label paths
-		image_paths = glob(os.path.join(data_folder, 'driver*/*/*.jpg'))
-		label_paths = {
-			re.sub(r'_(lane|road)_', '_', os.path.basename(path)): path
-			for path in glob(os.path.join(data_folder, 'gt_image_2', '*_road_*.png'))}
+		#image_paths = np.array(glob(os.path.join(data_folder, 'driver_23*/*/*.jpg')))
+		num_samples = 52857
+		image_paths = []
+		label_paths = []
+		with open(data_folder + '/list/train_gt.txt') as fp:
+			for i in range(num_samples):
+				line = fp.readline().split(' ')
+				image_paths.append(data_folder + line[0])
+				label_paths.append(data_folder + line[1])
+		images = np.array(image_paths)
+		labels = np.array(label_paths)
+		label_dict = {image: label for image, label in zip(images, labels)}
+
+		#label_paths = {
+		#	re.sub(r'_(lane|road)_', '_', os.path.basename(path)): path
+		#	for path in glob(os.path.join(data_folder, 'laneseg_label_w16', 'driver_23*/*/*.png'))}
 		background_color = np.array([255, 0, 0])
 
 		# Shuffle training data
 		random.shuffle(image_paths)
 		# Loop through batches and grab images, yielding each batch
-		for batch_i in range(0, len(image_paths), batch_size):
+		for batch_i in range(0, num_samples, batch_size):
 			images = []
 			gt_images = []
 			for image_file in image_paths[batch_i:batch_i+batch_size]:
-				gt_image_file = label_paths[os.path.basename(image_file)]
+				#gt_image_file = label_paths[os.path.basename(image_file)]
+				gt_image_file = label_dict[image_file]
+				print(image_file, gt_image_file)
 				# Re-size to image_shape
-				image = Image.resize(Image.read(image_file), image_shape)
-				gt_image = Image.resize(Image.read(gt_image_file), image_shape)
+				image = transform.resize(io.imread(image_file), image_shape)
+				gt_image = transform.resize(io.imread(gt_image_file), image_shape)
 
 				# Create "one-hot-like" labels by class
 				gt_bg = np.all(gt_image == background_color, axis=2)
@@ -132,7 +148,7 @@ def gen_test_output(sess, logits, keep_prob, image_pl, data_folder, image_shape)
 	:return: Output for for each test image
 	"""
 	for image_file in glob(os.path.join(data_folder, 'image_2', '*.png')):
-		image = Image.resize(Image.read(image_file), image_shape)
+		image = transform.resize(io.imread(image_file), image_shape)
 
 		# Run inference
 		im_softmax = sess.run(

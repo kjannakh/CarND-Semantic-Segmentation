@@ -21,7 +21,7 @@ DROPOUT = 0.75
 
 data_dir = './data'
 runs_dir = './runs'
-training_dir ='../../CULane'
+training_dir ='../../CULane/'
 vgg_path = './data/vgg'
 
 tf.compat.v1.disable_eager_execution()
@@ -202,26 +202,47 @@ def run():
         
         print("All done!")
 
-
+from glob import glob
+data_folder = '../../CULane'
 if __name__ == '__main__':
-    #run()
-    #background_color = np.array([255, 0, 0])
-    gt_file = '../../CULane/annotations_new/driver_23_30frame/05151640_0419.MP4/00000.lines.txt'
-    image_file = '../../CULane/driver_23_30frame/05151640_0419.MP4/00000.jpg'
-    image = io.imread(image_file)
-    print(image.shape)
-    gt_image = np.zeros(image_shape)
-    with open(gt_file) as annotations:
-        for line in annotations:
-            points = np.array(line.split()).astype(float).reshape(-1,2)
-            gt_image[points.astype(int)] = 1
+    run()
+    #num_samples = 52857
+    #image_paths = []
+    #label_paths = []
+    #with open(data_folder + '/list/train_gt.txt') as fp:
+    #    for i in range(num_samples):
+    #        line = fp.readline().split(' ')
+    #        image_paths.append(line[0])
+    #        label_paths.append(line[1])
+    #images = np.array(image_paths)
+    #labels = np.array(label_paths)
+    #shuffler = np.random.permutation(len(images))
+    #images = images[shuffler]
+    #labels = labels[shuffler]
+    #label_dict = {image: label for image, label in zip(images, labels)}
 
-    gt_image = gt_image.reshape(image_shape)
-    plt.imshow(gt_image)
-    plt.show()
+    #print(label_paths[0,0])
+    #print(label_paths.shape)
+    #image_paths = np.array(glob(os.path.join(data_folder, 'driver_23*/*/*.jpg')))
+    #labels = np.array(glob(os.path.join(data_folder, 'laneseg_label_w16', 'driver_23*/*/*.png')))
+    #for label in labels:
+    #    if 
+    #print(image_paths.shape, labels.shape)
+    #background_color = np.array([255, 0, 0])
+    #gt_file = '../../CULane/annotations_new/driver_23_30frame/05151640_0419.MP4/00000.lines.txt'
+    #image_file = '../../CULane/driver_23_30frame/05151640_0419.MP4/00000.jpg'
+    #image = io.imread(image_file)
+    #print(image.shape)
+    #gt_image = np.zeros(image_shape)
+    #with open(gt_file) as annotations:
+    #    for line in annotations:
+    #        points = np.array(line.split()).astype(float).reshape(-1,2)
+    #        gt_image[points.astype(int)] = 1
+
+    #gt_image = gt_image.reshape(image_shape)
+    #plt.imshow(gt_image)
+    #plt.show()
 
     #gt_bg = np.all(gt_image == background_color, axis=2)
     #gt_bg = gt_bg.reshape(*gt_bg.shape, 1)
     #gt_image = np.concatenate((gt_bg, np.invert(gt_bg)), axis=2)
-
-    print(gt_image.shape)
