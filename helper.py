@@ -108,7 +108,7 @@ def gen_batch_function(data_folder, image_shape):
 		#label_paths = {
 		#	re.sub(r'_(lane|road)_', '_', os.path.basename(path)): path
 		#	for path in glob(os.path.join(data_folder, 'laneseg_label_w16', 'driver_23*/*/*.png'))}
-		background_color = np.array([255, 0, 0])
+		background_color = 0
 
 		# Shuffle training data
 		random.shuffle(image_paths)
@@ -125,7 +125,8 @@ def gen_batch_function(data_folder, image_shape):
 				gt_image = transform.resize(io.imread(gt_image_file), image_shape)
 
 				# Create "one-hot-like" labels by class
-				gt_bg = np.all(gt_image == background_color, axis=2)
+				#gt_bg = np.all(gt_image == background_color, axis=2)
+				gt_bg = gt_image == background_color
 				gt_bg = gt_bg.reshape(*gt_bg.shape, 1)
 				gt_image = np.concatenate((gt_bg, np.invert(gt_bg)), axis=2)
 
