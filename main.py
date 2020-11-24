@@ -12,9 +12,9 @@ from skimage import io
 import matplotlib.pyplot as plt
 
 num_classes = 2
-image_shape = (590, 1640) #CULane dataset
-EPOCHS = 40
-BATCH_SIZE = 16
+image_shape = (160, 576) #(590, 1640) #CULane dataset shape
+EPOCHS = 1
+BATCH_SIZE = 8
 DROPOUT = 0.75
 
 # Specify these directory paths
@@ -26,9 +26,9 @@ vgg_path = './data/vgg'
 
 tf.compat.v1.disable_eager_execution()
 
-correct_label = tf.compat.v1.placeholder(tf.float32, [None, image_shape[0], image_shape[1], num_classes])
-learning_rate = tf.compat.v1.placeholder(tf.float32)
-keep_prob = tf.compat.v1.placeholder(tf.float32)
+#correct_label = tf.compat.v1.placeholder(tf.float32, [None, image_shape[0], image_shape[1], num_classes])
+#learning_rate = tf.compat.v1.placeholder(tf.float32)
+#keep_prob = tf.compat.v1.placeholder(tf.float32)
 
 # Check TensorFlow Version
 assert LooseVersion(tf.compat.v1.__version__) >= LooseVersion('1.0'), 'Please use TensorFlow version 1.0 or newer.  You are using {}'.format(tf.compat.v1.__version__)
@@ -198,14 +198,14 @@ def run():
                 correct_label, keep_prob, learning_rate)
 
         # Run the model with the test images and save each painted output image (roads painted green)
-        helper.save_inference_samples(runs_dir, data_dir, session, image_shape, logits, keep_prob, image_input)
+        helper.save_inference_samples(runs_dir, training_dir, session, image_shape, logits, keep_prob, image_input)
         
         print("All done!")
 
 from glob import glob
 data_folder = '../../CULane'
 if __name__ == '__main__':
-    run()
+    #run()
     #num_samples = 52857
     #image_paths = []
     #label_paths = []
@@ -229,20 +229,12 @@ if __name__ == '__main__':
     #    if 
     #print(image_paths.shape, labels.shape)
     #background_color = np.array([255, 0, 0])
-    #gt_file = '../../CULane/annotations_new/driver_23_30frame/05151640_0419.MP4/00000.lines.txt'
+    #gt_file = '../../CULane/laneseg_label_w16/driver_23_30frame/05151640_0419.MP4/00000.png'
     #image_file = '../../CULane/driver_23_30frame/05151640_0419.MP4/00000.jpg'
-    #image = io.imread(image_file)
+    #image = io.imread(gt_file)
     #print(image.shape)
-    #gt_image = np.zeros(image_shape)
-    #with open(gt_file) as annotations:
-    #    for line in annotations:
-    #        points = np.array(line.split()).astype(float).reshape(-1,2)
-    #        gt_image[points.astype(int)] = 1
-
-    #gt_image = gt_image.reshape(image_shape)
-    #plt.imshow(gt_image)
+    #mask = (image != 0)
+    #new_image = np.zeros((image.shape[0], image.shape[1], 3))
+    #new_image[mask,1] = 1
+    #plt.imshow(new_image)
     #plt.show()
-
-    #gt_bg = np.all(gt_image == background_color, axis=2)
-    #gt_bg = gt_bg.reshape(*gt_bg.shape, 1)
-    #gt_image = np.concatenate((gt_bg, np.invert(gt_bg)), axis=2)

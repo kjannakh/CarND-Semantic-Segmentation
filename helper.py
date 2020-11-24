@@ -20,6 +20,8 @@ from tqdm import tqdm
 from PIL import Image
 from skimage import transform
 from skimage import io
+from skimage import img_as_ubyte
+
 
 
 class DLProgress(tqdm):
@@ -93,7 +95,7 @@ def gen_batch_function(data_folder, image_shape):
 		"""
 		# Grab image and label paths
 		#image_paths = np.array(glob(os.path.join(data_folder, 'driver_23*/*/*.jpg')))
-		num_samples = 52857
+		num_samples = 2048 # 52857 is full length of CuLane driver23 data
 		image_paths = []
 		label_paths = []
 		with open(data_folder + '/list/train_gt.txt') as fp:
@@ -119,7 +121,6 @@ def gen_batch_function(data_folder, image_shape):
 			for image_file in image_paths[batch_i:batch_i+batch_size]:
 				#gt_image_file = label_paths[os.path.basename(image_file)]
 				gt_image_file = label_dict[image_file]
-				print(image_file, gt_image_file)
 				# Re-size to image_shape
 				image = transform.resize(io.imread(image_file), image_shape)
 				gt_image = transform.resize(io.imread(gt_image_file), image_shape)
@@ -148,24 +149,34 @@ def gen_test_output(sess, logits, keep_prob, image_pl, data_folder, image_shape)
 	:param image_shape: Tuple - Shape of image
 	:return: Output for for each test image
 	"""
-	for image_file in glob(os.path.join(data_folder, 'image_2', '*.png')):
-		image = transform.resize(io.imread(image_file), image_shape)
+	num_test = 16
+	image_paths = []
+	#for image_file in glob(os.path.join(data_folder, 'image_2', '*.png')):
+	with open(data_folder + '/list/test.txt') as fp:
+		for j in range(num_test):
+			line = fp.readline().split()
+			image_paths.append(data_folder + line[0])
 
-		# Run inference
-		im_softmax = sess.run(
-			[tf.nn.softmax(logits)],
-			{keep_prob: 1.0, image_pl: [image]})
-		# Splice out second column (road), reshape output back to image_shape
-		im_softmax = im_softmax[0][:, 1].reshape(image_shape[0], image_shape[1])
-		# If road softmax > 0.5, prediction is road
-		segmentation = (im_softmax > 0.5).reshape(image_shape[0], image_shape[1], 1)
-		# Create mask based on segmentation to apply to original image
-		mask = np.dot(segmentation, np.array([[0, 255, 0, 127]]))
-		mask = Image.fromarray(mask, mode="RGBA")
-		street_im = Image.fromarray(image)
-		street_im.paste(mask, box=None, mask=mask)
+		for image_file in image_paths:
+			image = transform.resize(io.imread(image_file), image_shape)
+		
+			# Run inference
+			im_softmax = sess.run(
+				[tf.nn.softmax(logits)],
+				{keep_prob: 1.0, image_pl: [image]})
+			# Splice out second column (road), reshape output back to image_shape
+			im_softmax = im_softmax[0][:, 1].reshape(image_shape[0], image_shape[1])
+			# If road softmax > 0.5, prediction is road
+			segmentation = (im_softmax > 0.5).reshape(image_shape[0], image_shape[1], 1)
+			# Create mask based on segmentation to apply to original image
+			mask = np.dot(segmentation, np.array([[0, 255, 0, 127]]))
+			mask = Image.fromarray(mask, mode="RGBA")
+			#mask = np.dot(segmentation, np.array([[0, 255, 0]]))
+			image = np.dstack((img_as_ubyte(image), alpha))
+			street_im = Image.fromarray(img_as_ubyte(image))
+			street_im.paste(mask, box=None, mask=mask)
 
-		yield os.path.basename(image_file), np.array(street_im)
+			yield os.path.basename(image_file), np.array(street_im)
 
 
 def save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image):
@@ -188,6 +199,6 @@ def save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_p
 	# Run NN on test images and save them to HD
 	print('Training Finished. Saving test images to: {}'.format(output_dir))
 	image_outputs = gen_test_output(
-		sess, logits, keep_prob, input_image, os.path.join(data_dir, 'data_road/testing'), image_shape)
+		sess, logits, keep_prob, input_image, data_dir, image_shape)
 	for name, image in image_outputs:
-		Image.save(os.path.join(output_dir, name), image)
+		io.imsave(os.path.join(output_dir, name), image)
